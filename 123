@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trò Chơi Gắp Thú</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f9ff; /* Light blue background */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        .claw-machine-container {
+            background: linear-gradient(145deg, #89cff0, #add8e6); /* Baby blue gradient */
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2), inset 0 0 15px rgba(255,255,255,0.5);
+            width: 90vw;
+            max-width: 450px;
+            position: relative;
+            border: 8px solid #fff;
+        }
+        .top-bar {
+            background-color: #ff69b4; /* Hot pink */
+            height: 50px;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 24px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            border-bottom: 4px solid #ff1493; /* Darker pink */
+        }
+        .game-window {
+            background-color: rgba(255, 255, 255, 0.3); /* Semi-transparent glass */
+            border: 2px solid #fff;
+            border-radius: 0 0 10px 10px;
+            height: 350px;
+            position: relative;
+            overflow: hidden;
+            padding-top: 40px; /* Space for claw rail */
+        }
+        .claw-rail {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            height: 20px;
+            background-color: #d3d3d3; /* Light grey */
+            border-radius: 10px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .claw {
+            width: 40px;
+            height: 30px; /* Initial height before extending */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M40 50 Q50 40 60 50 L70 80 Q50 100 30 80 Z' fill='%23FF6347' stroke='%23000' stroke-width='3'/%3E%3Cpath d='M45 50 Q50 60 55 50' fill='none' stroke='%23000' stroke-width='3'/%3E%3Ccircle cx='50' cy='35' r='10' fill='%23FFD700'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center bottom;
+            position: absolute;
+            top: 15px; /* Positioned under the rail */
+            left: 50%;
+            transform: translateX(-50%);
+            transition: left 0.3s ease-out, height 0.5s ease-in-out, top 0.5s ease-in-out;
+            z-index: 10;
+        }
+        .claw.grabbing {
+            height: 200px; /* Extended height */
+        }
+        .claw-arm {
+            width: 6px;
+            height: 0; /* Initially hidden, extends with claw */
+            background-color: #a9a9a9; /* Dark grey */
+            position: absolute;
+            top: -10px; /* Connects to claw base */
+            left: 50%;
+            transform: translateX(-50%);
+            transition: height 0.5s ease-in-out;
+            z-index: 9;
+        }
+        .claw.grabbing .claw-arm {
+             height: calc(100% - 20px); /* Adjust based on claw's final position */
+        }
+
+        .prize-area {
+            display: flex;
+            /* justify-content: space-around; */ /* Removed for precise positioning */
+            align-items: flex-end;
+            height: 100%;
+            padding: 10px; /* Keep padding for edges */
+            position: relative;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.1) 100%), url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23fbcfe8' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); /* Light pink pattern */
+        }
+        .prize {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%; /* Make them look like plush balls */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.7);
+            cursor: default;
+            position: absolute; /* For positioning within prize-area */
+            bottom: 10px; /* Start at the bottom */
+            transition: transform 0.5s ease-out, opacity 0.5s ease-out, left 0.3s linear, top 0.3s linear;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .prize-emoji {
+            font-size: 28px;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
+        }
+        .prize-points {
+            font-size: 10px;
+            background-color: rgba(0,0,0,0.5);
+            padding: 1px 4px;
+            border-radius: 3px;
+            margin-top: -2px;
+        }
+        .prize.caught {
+            /* transition is already defined above, ensuring smooth follow */
+            z-index: 11;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px;
+            background-color: #ffc0cb; /* Pink */
+            border-radius: 10px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+        }
+        .control-button, .drop-button {
+            padding: 10px 15px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+        }
+        .control-button {
+            background-color: #4682b4; /* Steel blue */
+        }
+        .control-button:hover {
+            background-color: #5a9bd3; /* Lighter steel blue */
+        }
+        .control-button:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .drop-button {
+            background-color: #ff4500; /* OrangeRed */
+            padding: 15px 25px;
+            font-size: 18px;
+        }
+        .drop-button:hover {
+            background-color: #ff6347; /* Tomato */
+        }
+         .drop-button:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .drop-button:disabled {
+            background-color: #d3d3d3; /* Light grey */
+            cursor: not-allowed;
+        }
+
+        .info-display {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #fff0f5; /* Lavender blush */
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #score {
+            font-size: 20px;
+            font-weight: bold;
+            color: #db2777; /* Pink-700 */
+        }
+        #message {
+            margin-top: 5px;
+            font-size: 16px;
+            color: #1e40af; /* Blue-800 */
+            min-height: 24px; /* Prevent layout shift */
+            font-family: 'Patrick Hand', cursive;
+        }
+        .prize-chute {
+            position: absolute;
+            bottom: 20px;
+            left: 10px;
+            width: 80px;
+            height: 60px;
+            background-color: #a9a9a9; /* Dark grey */
+            border: 3px solid #808080; /* Grey */
+            border-radius: 5px 5px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            text-align: center;
+            box-shadow: inset 0 3px 5px rgba(0,0,0,0.3);
+        }
+        /* Decorative lights */
+        .light {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: yellow;
+            border-radius: 50%;
+            box-shadow: 0 0 5px yellow, 0 0 10px yellow;
+            animation: blink 1.5s infinite alternate;
+        }
+        .light.l1 { top: 70px; left: 5px; }
+        .light.l2 { top: 120px; left: 5px; animation-delay: 0.3s; }
+        .light.l3 { top: 170px; left: 5px; animation-delay: 0.6s; }
+        .light.r1 { top: 70px; right: 5px; animation-delay: 0.9s; }
+        .light.r2 { top: 120px; right: 5px; animation-delay: 1.2s; }
+        .light.r3 { top: 170px; right: 5px; animation-delay: 0.1s; }
+
+        @keyframes blink {
+            from { opacity: 0.3; }
+            to { opacity: 1; }
+        }
+
+        /* Styling for the prize points display on the bear */
+        .prize[data-points="5"] { background-color: #60a5fa; } /* blue-400 */
+        .prize[data-points="10"] { background-color: #34d399; } /* green-400 */
+        .prize[data-points="15"] { background-color: #fbbf24; } /* amber-400 */
+        .prize[data-points="20"] { background-color: #f87171; } /* red-400 */
+        .prize[data-points="50"] { background-color: #c084fc; } /* purple-400 */
+
+    </style>
+</head>
+<body>
+    <div class="claw-machine-container">
+        <div class="top-bar">Gắp Gấu Bông!</div>
+        <div class="game-window">
+            <div class="claw-rail"></div>
+            <div id="claw" class="claw">
+                <div class="claw-arm"></div>
+            </div>
+            <div id="prize-area" class="prize-area">
+                </div>
+            <div class="prize-chute">Thú Bông</div>
+            <div class="light l1"></div><div class="light l2"></div><div class="light l3"></div>
+            <div class="light r1"></div><div class="light r2"></div><div class="light r3"></div>
+        </div>
+        <div class="controls">
+            <button id="move-left" class="control-button">◀️ Trái</button>
+            <button id="drop" class="drop-button">Thả Gắp!</button>
+            <button id="move-right" class="control-button">Phải ▶️</button>
+        </div>
+        <div class="info-display">
+            <div id="score">Điểm: 0</div>
+            <div id="message">Chúc may mắn!</div>
+        </div>
+    </div>
+
+    <script>
+        // Game elements
+        const claw = document.getElementById('claw');
+        const prizeArea = document.getElementById('prize-area');
+        const scoreDisplay = document.getElementById('score');
+        const messageDisplay = document.getElementById('message');
+        const dropButton = document.getElementById('drop');
+        const moveLeftButton = document.getElementById('move-left');
+        const moveRightButton = document.getElementById('move-right');
+        const gameWindow = document.querySelector('.game-window');
+        const clawRail = document.querySelector('.claw-rail');
+
+        // Game state
+        let score = 0;
+        let clawPosition = 50; // Percentage from left
+        const clawSpeed = 3; // Percentage change, slightly reduced for finer control
+        let isDropping = false;
+        let activePrizes = [];
+        const MAX_PRIZES = 5;
+        const PRIZE_WIDTH = 50; // pixels
+
+        const prizeTypes = [
+            { name: "Gấu Nâu", points: 5, catchChance: 0.80, emoji: "🧸", color: "#60a5fa" },
+            { name: "Gấu Trúc", points: 10, catchChance: 0.65, emoji: "🐼", color: "#34d399" },
+            { name: "Gấu Bắc Cực", points: 15, catchChance: 0.50, emoji: "🐻‍❄️", color: "#fbbf24" },
+            { name: "Gấu Koala", points: 20, catchChance: 0.35, emoji: "🐨", color: "#f87171" },
+            { name: "Gấu Vàng", points: 50, catchChance: 0.15, emoji: "🌟", color: "#c084fc" }
+        ];
+
+        // Initialize Game
+        function initGame() {
+            score = 0;
+            clawPosition = 50; // Start claw in the middle
+            isDropping = false;
+            updateScoreDisplay();
+            messageDisplay.textContent = "Di chuyển và thả gắp!";
+            claw.style.left = `${clawPosition}%`;
+            claw.classList.remove('grabbing');
+            claw.style.top = '15px';
+            enableControls();
+            populatePrizes();
+        }
+
+        // Populate prizes in the area
+        function populatePrizes() {
+            prizeArea.innerHTML = ''; // Clear existing prizes
+            activePrizes = [];
+            const prizeAreaWidth = prizeArea.offsetWidth - 20; // Usable width, accounting for padding
+            const segmentWidth = prizeAreaWidth / MAX_PRIZES;
+
+            for (let i = 0; i < MAX_PRIZES; i++) {
+                const prizeData = prizeTypes[Math.floor(Math.random() * prizeTypes.length)];
+                const prizeElement = document.createElement('div');
+                prizeElement.classList.add('prize');
+                prizeElement.dataset.points = prizeData.points;
+                prizeElement.dataset.catchChance = prizeData.catchChance;
+                prizeElement.dataset.id = `prize-${Date.now()}-${i}`;
+
+                prizeElement.innerHTML = `
+                    <span class="prize-emoji">${prizeData.emoji}</span>
+                    <span class="prize-points">${prizeData.points}đ</span>
+                `;
+                prizeElement.style.backgroundColor = prizeData.color;
+
+                // Calculate position to distribute prizes evenly
+                // Position is center of segment minus half prize width
+                const baseLeft = (i * segmentWidth) + (segmentWidth / 2) - (PRIZE_WIDTH / 2);
+                // Add a small random offset within the segment for a bit of natural variation, but ensure it stays within bounds
+                const randomOffset = (Math.random() - 0.5) * (segmentWidth * 0.2); // Max 10% of segment width deviation
+                let newLeft = baseLeft + randomOffset;
+
+                // Ensure prize is within the prizeArea boundaries (considering padding)
+                newLeft = Math.max(0, Math.min(newLeft, prizeAreaWidth - PRIZE_WIDTH));
+
+                prizeElement.style.left = `${newLeft}px`;
+                prizeElement.style.bottom = `${10 + Math.random() * 15}px`; // Slight random height variation
+
+                prizeArea.appendChild(prizeElement);
+                activePrizes.push({
+                    id: prizeElement.dataset.id,
+                    element: prizeElement,
+                    points: parseInt(prizeData.points),
+                    catchChance: parseFloat(prizeData.catchChance),
+                    left: newLeft,
+                    width: PRIZE_WIDTH,
+                    isCaught: false
+                });
+            }
+        }
+
+
+        // Move claw
+        function moveClaw(direction) {
+            if (isDropping) return;
+            if (direction === 'left') {
+                clawPosition -= clawSpeed;
+            } else if (direction === 'right') {
+                clawPosition += clawSpeed;
+            }
+            
+            const gameWindowWidth = gameWindow.offsetWidth;
+            // Claw's actual pixel position from the left of the gameWindow
+            let clawPixelPos = (clawPosition / 100) * gameWindowWidth;
+
+            // Constrain claw within the rail visually. Rail has 10px padding.
+            // Min pixel position for claw center relative to gameWindow
+            const minPixelPos = 10 + (claw.offsetWidth / 2);
+            // Max pixel position for claw center relative to gameWindow
+            const maxPixelPos = gameWindowWidth - 10 - (claw.offsetWidth / 2);
+
+            clawPixelPos = Math.max(minPixelPos, Math.min(clawPixelPos, maxPixelPos));
+            
+            // Convert back to percentage for style.left
+            clawPosition = (clawPixelPos / gameWindowWidth) * 100;
+            claw.style.left = `${clawPosition}%`;
+        }
+
+        // Drop claw
+        function dropClaw() {
+            if (isDropping) return;
+            isDropping = true;
+            disableControls();
+            messageDisplay.textContent = "Đang gắp...";
+
+            claw.classList.add('grabbing');
+            const prizeAreaHeight = prizeArea.offsetHeight;
+            claw.style.top = `${prizeAreaHeight - 60}px`; // Adjust 60 based on claw height and desired depth
+
+            setTimeout(() => {
+                checkCatch();
+            }, 700);
+        }
+
+        // Check if a prize is caught
+        function checkCatch() {
+            const clawRect = claw.getBoundingClientRect();
+            // Use the center of the claw for more precise targeting
+            const clawCenterX = clawRect.left + clawRect.width / 2;
+            
+            let potentialCatch = null;
+
+            for (const prize of activePrizes) {
+                if (prize.isCaught) continue;
+                const prizeRect = prize.element.getBoundingClientRect();
+
+                // Check if the claw's center is horizontally aligned with the prize
+                if (clawCenterX >= prizeRect.left && clawCenterX <= prizeRect.right) {
+                     // Check if claw is low enough to grab this specific prize
+                    if (clawRect.bottom > prizeRect.top + prizeRect.height / 3) { // Check if claw is over at least 1/3 of prize
+                        potentialCatch = prize; // This is the prize directly under the claw
+                        break; // Found the target prize
+                    }
+                }
+            }
+
+            if (potentialCatch) {
+                if (Math.random() < potentialCatch.catchChance) {
+                    handleCatch(potentialCatch);
+                } else {
+                    messageDisplay.textContent = "Hụt rồi! Gấu tuột mất!";
+                    // Optional: slight "slip" animation for prize
+                    potentialCatch.element.style.transform = `translateY(5px) rotate(${Math.random() * 20 - 10}deg)`;
+                    setTimeout(() => {
+                        potentialCatch.element.style.transform = '';
+                        retractClaw();
+                    }, 300);
+                }
+            } else {
+                messageDisplay.textContent = "Không trúng gì cả!";
+                retractClaw();
+            }
+        }
+
+        // Handle successful catch
+        function handleCatch(prize) {
+            prize.isCaught = true;
+            messageDisplay.textContent = `Yeah! Gắp được ${prize.points} điểm!`;
+            score += prize.points;
+            updateScoreDisplay();
+
+            prize.element.classList.add('caught');
+            
+            // Animate prize to claw position
+            const clawRect = claw.getBoundingClientRect();
+            const gameWindowRect = gameWindow.getBoundingClientRect();
+            // Position prize relative to gameWindow, centered under claw
+            prize.element.style.left = `${clawRect.left - gameWindowRect.left + (clawRect.width / 2) - (prize.element.offsetWidth / 2)}px`;
+            prize.element.style.top = `${clawRect.top - gameWindowRect.top + clawRect.height - prize.element.offsetHeight / 2 - 5}px`; // Attach near bottom of claw
+
+            // Retract claw with prize
+            setTimeout(() => {
+                claw.classList.remove('grabbing');
+                claw.style.top = '15px'; // Move claw up
+                // Prize moves with claw
+                prize.element.style.top = `${15 + claw.offsetHeight - prize.element.offsetHeight / 2 - 5}px`;
+
+                // Move claw to chute
+                setTimeout(() => {
+                    const prizeChute = document.querySelector('.prize-chute');
+                    const chuteRect = prizeChute.getBoundingClientRect();
+                    const targetClawLeftPercent = ((chuteRect.left - gameWindowRect.left + chuteRect.width / 2) / gameWindow.offsetWidth) * 100;
+                    
+                    claw.style.left = `${targetClawLeftPercent}%`;
+                    // Prize moves with claw to be centered over chute
+                    prize.element.style.left = `${chuteRect.left - gameWindowRect.left + (chuteRect.width - prize.element.offsetWidth)/2}px`;
+
+                    // Drop prize into chute
+                    setTimeout(() => {
+                        prize.element.style.top = `${chuteRect.top - gameWindowRect.top + chuteRect.height / 3}px`; // Drop into chute
+                        prize.element.style.opacity = '0';
+                        
+                        setTimeout(() => {
+                            prize.element.remove();
+                            activePrizes = activePrizes.filter(p => p.id !== prize.id);
+                            if (activePrizes.length < MAX_PRIZES) {
+                                addNewPrize();
+                            }
+                            retractClaw(true); // Full retract after successful drop
+                        }, 300); // Time for fade out
+                    }, 500); // Time to move over chute
+                }, 500); // Time for claw to go up
+            }, 300); // Time for prize to attach and start moving up
+        }
+        
+        function addNewPrize() {
+            if (activePrizes.length >= MAX_PRIZES) return;
+
+            const prizeData = prizeTypes[Math.floor(Math.random() * prizeTypes.length)];
+            const prizeElement = document.createElement('div');
+            prizeElement.classList.add('prize');
+            prizeElement.dataset.points = prizeData.points;
+            prizeElement.dataset.catchChance = prizeData.catchChance;
+            prizeElement.dataset.id = `prize-${Date.now()}-${activePrizes.length}`;
+            prizeElement.innerHTML = `
+                <span class="prize-emoji">${prizeData.emoji}</span>
+                <span class="prize-points">${prizeData.points}đ</span>
+            `;
+            prizeElement.style.backgroundColor = prizeData.color;
+
+            const prizeAreaWidth = prizeArea.offsetWidth - 20; // Usable width
+            // Find an empty slot or a less crowded area if possible
+            // This is a simplified placement for a single new prize.
+            // For more robust even distribution on adding, would need to re-evaluate all positions.
+            let newLeft = Math.random() * (prizeAreaWidth - PRIZE_WIDTH);
+            
+            // Basic check to avoid immediate overlap with existing prizes if possible
+            let attempts = 0;
+            let overlaps;
+             do {
+                newLeft = Math.random() * (prizeAreaWidth - PRIZE_WIDTH);
+                overlaps = activePrizes.some(p => p.element && Math.abs(p.element.offsetLeft - newLeft) < PRIZE_WIDTH);
+                attempts++;
+            } while (overlaps && attempts < 10);
+
+
+            prizeElement.style.left = `${newLeft}px`;
+            prizeElement.style.bottom = `${10 + Math.random() * 15}px`;
+            prizeElement.style.opacity = '0';
+
+            prizeArea.appendChild(prizeElement);
+            setTimeout(() => prizeElement.style.opacity = '1', 50);
+
+            activePrizes.push({
+                id: prizeElement.dataset.id,
+                element: prizeElement,
+                points: parseInt(prizeData.points),
+                catchChance: parseFloat(prizeData.catchChance),
+                left: newLeft,
+                width: PRIZE_WIDTH,
+                isCaught: false
+            });
+        }
+
+
+        // Retract claw after attempt
+        function retractClaw(successfulDrop = false) {
+            claw.classList.remove('grabbing');
+            claw.style.top = '15px';
+
+            setTimeout(() => {
+                isDropping = false;
+                enableControls();
+                if (!successfulDrop) { // Only reset message if it wasn't a successful catch or a "slip"
+                    if (messageDisplay.textContent !== "Hụt rồi! Gấu tuột mất!" && messageDisplay.textContent !== "Không trúng gì cả!") {
+                         messageDisplay.textContent = "Thử lại nào!";
+                    }
+                }
+                // Reset claw to center only if it was a complete miss or a slip, not after successful drop.
+                if (!successfulDrop) {
+                    clawPosition = 50; // Reset to center
+                    claw.style.left = `${clawPosition}%`;
+                }
+
+            }, 500);
+        }
+
+        // Update score display
+        function updateScoreDisplay() {
+            scoreDisplay.textContent = `Điểm: ${score}`;
+        }
+
+        // Enable/Disable controls
+        function disableControls() {
+            dropButton.disabled = true;
+            moveLeftButton.disabled = true;
+            moveRightButton.disabled = true;
+        }
+        function enableControls() {
+            dropButton.disabled = false;
+            moveLeftButton.disabled = false;
+            moveRightButton.disabled = false;
+        }
+
+        // Event Listeners
+        moveLeftButton.addEventListener('click', () => moveClaw('left'));
+        moveRightButton.addEventListener('click', () => moveClaw('right'));
+        dropButton.addEventListener('click', dropClaw);
+        
+        document.addEventListener('keydown', (event) => {
+            if (isDropping && event.key !== 'Escape') return; // Allow escape to potentially reset
+            if (event.key === 'ArrowLeft') {
+                moveClaw('left');
+            } else if (event.key === 'ArrowRight') {
+                moveClaw('right');
+            } else if (event.key === ' ' || event.key === 'Enter' || event.key === 'ArrowDown') {
+                event.preventDefault(); 
+                dropClaw();
+            }
+        });
+
+        window.onload = () => {
+            initGame();
+            // Ensure prizeArea has dimensions before populating
+            setTimeout(() => {
+                if (prizeArea.offsetWidth > 0) {
+                    populatePrizes();
+                } else { // Fallback if offsetWidth is still 0
+                    setTimeout(populatePrizes, 200);
+                }
+            }, 50); 
+        };
+        window.onresize = () => {
+            // Recalculate prize positions on resize for responsiveness
+            if (prizeArea.offsetWidth > 0) {
+                 // Re-position existing prizes or re-populate entirely
+                populatePrizes(); // Simplest is to re-populate
+                // Also reset claw position to avoid it being off-screen
+                clawPosition = 50;
+                claw.style.left = `${clawPosition}%`;
+            }
+        };
+
+    </script>
+</body>
+</html>
