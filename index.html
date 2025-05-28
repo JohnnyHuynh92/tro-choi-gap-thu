@@ -313,11 +313,12 @@
         const PRIZE_WIDTH = 50; // pixels
 
         const prizeTypes = [
-            { name: "Gấu Nâu", points: 5, catchChance: 0.80, emoji: "🧸", color: "#60a5fa" },
-            { name: "Gấu Trúc", points: 10, catchChance: 0.65, emoji: "🐼", color: "#34d399" },
-            { name: "Gấu Bắc Cực", points: 15, catchChance: 0.50, emoji: "🐻‍❄️", color: "#fbbf24" },
-            { name: "Gấu Koala", points: 20, catchChance: 0.35, emoji: "🐨", color: "#f87171" },
-            { name: "Gấu Vàng", points: 50, catchChance: 0.15, emoji: "🌟", color: "#c084fc" }
+            // Adjusted catchChance for easier gameplay
+            { name: "Gấu Nâu", points: 5, catchChance: 0.95, emoji: "🧸", color: "#60a5fa" }, // Was 0.80
+            { name: "Gấu Trúc", points: 10, catchChance: 0.85, emoji: "🐼", color: "#34d399" }, // Was 0.65
+            { name: "Gấu Bắc Cực", points: 15, catchChance: 0.75, emoji: "🐻‍❄️", color: "#fbbf24" }, // Was 0.50
+            { name: "Gấu Koala", points: 20, catchChance: 0.60, emoji: "🐨", color: "#f87171" }, // Was 0.35
+            { name: "Gấu Vàng", points: 50, catchChance: 0.40, emoji: "🌟", color: "#c084fc" }  // Was 0.15
         ];
 
         // Initialize Game
